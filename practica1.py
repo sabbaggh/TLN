@@ -2,6 +2,9 @@ import pandas as pd
 import spacy
 from spacy.lang.es.examples import sentences
 import matplotlib.pyplot as plt
+import nltk
+from nltk.stem.porter import *
+from nltk.stem import SnowballStemmer
 
 nlp = spacy.load("es_core_news_md")
 #Se lee el documento
@@ -125,8 +128,17 @@ def lematizar(doc):
         tokensNuevos.append(token.lemma_)
     return tokensNuevos
 
+def stemming(doc):
+    tokensNuevos = []
+    stemmer = SnowballStemmer("spanish")
+    for token in doc:
+        tokensNuevos.append(stemmer.stem(token))
+    return tokensNuevos
+
 def normalizacion(doc):
     normalizado = []
+
+
 #Se lee el archivo, se quitan espacios en blanco
 doc1 = leerArchivo(anexoA)
 doc1N = doc1.strip()
@@ -146,7 +158,8 @@ tokensMin = pasarAminusculas(tokensAnexoA)
 doc1N = nlp(quitaEspaciosySignos(tokensMin))
 tokensSinSS = nlp(removerStopWords(doc1N))
 tokensLemas = lematizar(tokensSinSS)
-print(tokensLemas)
+tokensStem = stemming(tokensLemas)
+print(tokensStem)
 
 
 #print(limpioA)
