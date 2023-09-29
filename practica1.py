@@ -8,6 +8,7 @@ from nltk.stem import SnowballStemmer
 
 #Funcion para leer el archivo
 def leerArchivo(nombreArchivo):
+    #SE LEE EL ARCHIVO Y SE REGRESA
     with open(nombreArchivo, encoding='utf-8') as f:
         contenido = f.read()
     contenido.strip()
@@ -15,30 +16,32 @@ def leerArchivo(nombreArchivo):
 
 #funcion para obtener los tokens del texto
 def obtenerTokens(texto):
+    #SE CONSIGUEN LOS TOKENS DENTRO DEL DOCUMENTO Y SE VAN METIENDO DENTRO DE UNA LISTA
     tokens = []
     for token in texto:
         tokens.append(token.text)
     return tokens
 
+#FUNCION PARA PASAR LOS TOKENS A MINUSCULAS
+#ESTA FUNCION FORMA PARTE  DEL PROCESO DE NORMALIZACION
 def pasarAminusculas(lista):
+    #SE RECORRE UNA LISTA DE TOKENS Y SE VA PASANDO CADA UNO A MINUSCULAS
     nuevosTookens = []
     for palabra in lista:
         nuevosTookens.append(palabra.lower())
     return nuevosTookens
 #Esta funcion sirve para quitar los espacios en blanco y signos de puntuacion de la lista de tokens
+#TAMBIEN FORMA PARTE DEL PROCESO DE NORMALIZACION
 def quitarCaracteresEspeciales(lista):
-    signos = [".", ",", "(", ")", " ", "'", ' ', '‘', '’', '…', '\n', '“', '.','”']
-    # quitando espacios en blanco y signos
+    #SI ALGUN TOKEN DENTRO DE LA LISTA FORMA PARTE DE LA LISTA DE SIMBOLOS ESPECIALES QUE DEFINIMOS ENTONCES NO SE METEN DENTRO DE LA NUEVA LISTA, DE ESTA MANERA MANTENEMOS SOLO LOS TOKENS IMPORTANTES
+    signos = [".","-", ",", "(", ")", " ", "'", ' ', '‘', '’', '…', '\n', '“', '.','”',':','—']
+    nuevosTokens = []
+    #quitando espacios en blanco y signos
     for i in lista:
-        if i in signos:
-            lista.remove(i)
-    for i in lista:
-        if i in signos:
-            lista.remove(i)
-    for i in lista:
-        if i in signos:
-            lista.remove(i)
-    nuevoStr =' '.join(map(str,lista))
+        if (i not in signos) and ("’" not in i) :
+            nuevosTokens.append(i)
+    #AL FINAL JUNTAMOS TODOS LOS TOKENS DE LA LISTA DENTRO DE UN STRING PARA USARLO ESTE EN LOS OTROS PROCESOS DE LA NORMALIZACION
+    nuevoStr =' '.join(map(str,nuevosTokens))
     return nuevoStr
 
 #Funcion para obtener los tokens unicos y meterlos a una lista
@@ -49,6 +52,7 @@ def obtenerTokensUnicos(lista):
             visto.append(token)
     return visto
 
+#EN ESTA FUNCION OBTENEMOS LA FRECUENCIA DE APARICION DE LOS TOKENS Y SE METE SU FRECUENCIA DENTRO DE UNA LISTA, ESTO SERVIRA PARA CREAR LOS HIS
 def obtenerFrecuenciadeToekens(listaUnicos, lista):
     frecuencia = []
     for i in range(len(listaUnicos)):
@@ -59,7 +63,7 @@ def obtenerFrecuenciadeToekens(listaUnicos, lista):
         frecuencia.append(cuenta)
     return frecuencia
 
-#crear histograma
+#FUNCION PARA GENERAR LOS HISTOGRAMAS
 def crearHistograma(tokensUnicos,frecuencia,titulo):
     plt.bar(tokensUnicos, frecuencia)
     plt.xlabel("Palabras")
@@ -69,6 +73,7 @@ def crearHistograma(tokensUnicos,frecuencia,titulo):
     plt.tight_layout()  # Ajustar el diseño del gráfico
     plt.show()
 
+#EN ESTA FUNCION SE OBTIENEN LOS TOKENS MAS COMUNES Y SE METE LA FRECUENCIA DE CADA UNO DE ESTOS, ADEMAS SE IMPRIME UNA LISTA INDICANCO EL TOKEN Y SU FRECUENCIA DE APARICION, SE METEN EN UN DATAFRAME PARA FACILITAR EL PROCESO DE IMPRESION
 def obtenerTokensMasComunes(tokensUnicos,frecuencia):
     listaTokensMF = []
     listaMaximos = []
@@ -131,12 +136,21 @@ def stemming(doc):
     stemmer = SnowballStemmer("spanish")
     for token in doc:
         tokensNuevos.append(stemmer.stem(token))
-    nuevoStr = ' '.join(map(str, tokensNuevos))
+    return tokensNuevos
+
+def stemmingIng(doc):
+    tokensNuevos = []
+    stemmer = SnowballStemmer("english")
+    for token in doc:
+        tokensNuevos.append(stemmer.stem(token))
     return tokensNuevos
 
 def posTag(doc):
     etiquetasAMantener = ['NOUN', 'VERB','ADJ']
-    nuevosTokens = [token for token in doc if token.pos_ in etiquetasAMantener]
+    nuevosTokens = []
+    for token in doc:
+        if token.pos_ in etiquetasAMantener:
+            nuevosTokens.append(token)
     return nuevosTokens
 
 
@@ -148,47 +162,64 @@ def normalizacionEsp(doc):
     normalizado = nlp(removerStopWords(normalizado))
     normalizado = lematizar(normalizado)
     normalizado = stemming(normalizado)
-
     return normalizado
 
-nlp = spacy.load("es_core_news_md")
-#Se lee el documento
-anexoA = "AnexoES.txt"
-
-#Se lee el archivo
-doc1 = leerArchivo(anexoA)
-doc1N = nlp(doc1)
-
+def normalizacionEng(doc):
+    normalizado = obtenerTokens(doc)
+    normalizado = pasarAminusculas(normalizado)
+    normalizado = nlpEn(quitarCaracteresEspeciales(normalizado))
+    print(normalizado)
+    print()
+    normalizado = posTag(normalizado)
+    normalizado = nlpEn(removerStopWords(normalizado))
+    normalizado = lematizar(normalizado)
+    normalizado = stemmingIng(normalizado)
+    return normalizado
 
 ####Anexo A
-#print(doc1N)
+#SE CARGA EL MODULO DE SPACY PARA ESPANOL
+nlp = spacy.load("es_core_news_md")
+#Se lee el archivo
+doc1 = leerArchivo("AnexoES.txt")
+doc1N = nlp(doc1)
 #Se obtienen los tokens del documento
 tokensAnexoA = obtenerTokens(doc1N)
 #Se quitan espacios en blanco y signos de puntuacion
 #limpioA = quitaEspaciosySignos(tokensAnexoA)
 #Se obtienen los textos unicos
 tokensUnicosA = obtenerTokensUnicos(tokensAnexoA)
+print(tokensUnicosA)
 frecuenciaAnexoA = obtenerFrecuenciadeToekens(tokensUnicosA,tokensAnexoA)
 normalizado = normalizacionEsp(doc1N)
 print(normalizado)
+normalizado.pop(0)
 
-
-#print(limpioA)
 print(f'El numero total de tokens para el Anexo A es {len(tokensAnexoA)}')
-#print(tokensUnicosA)
 print(f'El numero total de tokens unicos para el Anexo A es {len(tokensUnicosA)}')
-#print(frecuenciaAnexoA)
 print("Lista 10 tokens mas comunes antes de normalizar")
 tokensMC,frecMC = obtenerTokensMasComunes(tokensUnicosA,frecuenciaAnexoA)
 print("Lista 10 tokens menos comunes antes de normalizar")
-tokensMNC,frecMNC = obtenerTokensMenosComunes(tokensUnicosA,frecuenciaAnexoA,max(frecuenciaAnexoA))
-#xddd
-#print(tokensLemas)
-crearHistograma(tokensUnicosA,frecuenciaAnexoA,'Tokens mas comunes antes de normalizar')
+obtenerTokensMenosComunes(tokensUnicosA,frecuenciaAnexoA,max(frecuenciaAnexoA))
+crearHistograma(tokensUnicosA,frecuenciaAnexoA,'Tokens antes de normalizar')
 crearHistograma(tokensMC,frecMC,'30 tokens mas comunes antes de normalizar')
-crearHistograma(tokensMNC,frecMNC,'30 tokens menos comunes antes de normalizar')
 
-
-
-
-###############
+######TOKENS DESPUES DE NORMALIZAR
+print(f'El numero total de tokens para el Anexo A despues de normalizar es {len(normalizado)}')
+tokensUnicosA = obtenerTokensUnicos(normalizado)
+frecuenciaAnexoA = obtenerFrecuenciadeToekens(tokensUnicosA,normalizado)
+print(f'El numero total de tokens unicos para el Anexo A despues de normalizar es {len(tokensUnicosA)}')
+print("Lista 10 tokens mas comunes despues de normalizar")
+tokensMC,frecMC = obtenerTokensMasComunes(tokensUnicosA,frecuenciaAnexoA)
+print("Lista 10 tokens menos comunes despues de normalizar")
+obtenerTokensMenosComunes(tokensUnicosA,frecuenciaAnexoA,max(frecuenciaAnexoA))
+crearHistograma(tokensUnicosA,frecuenciaAnexoA,'Tokens despues de normalizar')
+crearHistograma(tokensMC,frecMC,'30 tokens mas comunes despues de normalizar')
+##################################################################
+##ANEXO B
+#SE CARGA EL MODULO DE SPACY PARA INGLES
+nlpEn = spacy.load('en_core_web_md')
+#SE LEE EL ARCHIVO
+doc1 = leerArchivo("AnexoEn.txt")
+doc1N = nlpEn(doc1)
+tokensAnexoA = obtenerTokens(doc1N)
+normalizado = normalizacionEng(doc1N)
