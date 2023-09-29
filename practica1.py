@@ -120,7 +120,6 @@ def obtenerTokensMenosComunes(tokensUnicos,frecuencia,maximo):
 
 def removerStopWords(doc):
     tokensSS = ""
-        #[token.text for token in doc if not token.is_stop]
     for token in doc:
         if not token.is_stop:
             tokensSS = tokensSS + " " + token.text
@@ -181,19 +180,17 @@ def normalizacionEng(doc):
 nlp = spacy.load("es_core_news_md")
 #Se lee el archivo
 doc1 = leerArchivo("AnexoES.txt")
+print(doc1)
 doc1N = nlp(doc1)
 #Se obtienen los tokens del documento
 tokensAnexoA = obtenerTokens(doc1N)
-#Se quitan espacios en blanco y signos de puntuacion
-#limpioA = quitaEspaciosySignos(tokensAnexoA)
-#Se obtienen los textos unicos
+#Se obtienen los tokens unicos
 tokensUnicosA = obtenerTokensUnicos(tokensAnexoA)
-print(tokensUnicosA)
 frecuenciaAnexoA = obtenerFrecuenciadeToekens(tokensUnicosA,tokensAnexoA)
 normalizado = normalizacionEsp(doc1N)
-print(normalizado)
 normalizado.pop(0)
 
+######TOKENS ANTES DE NORMALIZAR
 print(f'El numero total de tokens para el Anexo A es {len(tokensAnexoA)}')
 print(f'El numero total de tokens unicos para el Anexo A es {len(tokensUnicosA)}')
 print("Lista 10 tokens mas comunes antes de normalizar")
@@ -205,21 +202,52 @@ crearHistograma(tokensMC,frecMC,'30 tokens mas comunes antes de normalizar')
 
 ######TOKENS DESPUES DE NORMALIZAR
 print(f'El numero total de tokens para el Anexo A despues de normalizar es {len(normalizado)}')
+print(normalizado)
 tokensUnicosA = obtenerTokensUnicos(normalizado)
 frecuenciaAnexoA = obtenerFrecuenciadeToekens(tokensUnicosA,normalizado)
 print(f'El numero total de tokens unicos para el Anexo A despues de normalizar es {len(tokensUnicosA)}')
+print(tokensUnicosA)
 print("Lista 10 tokens mas comunes despues de normalizar")
 tokensMC,frecMC = obtenerTokensMasComunes(tokensUnicosA,frecuenciaAnexoA)
 print("Lista 10 tokens menos comunes despues de normalizar")
 obtenerTokensMenosComunes(tokensUnicosA,frecuenciaAnexoA,max(frecuenciaAnexoA))
 crearHistograma(tokensUnicosA,frecuenciaAnexoA,'Tokens despues de normalizar')
 crearHistograma(tokensMC,frecMC,'30 tokens mas comunes despues de normalizar')
+
+
 ##################################################################
+
 ##ANEXO B
 #SE CARGA EL MODULO DE SPACY PARA INGLES
 nlpEn = spacy.load('en_core_web_md')
 #SE LEE EL ARCHIVO
 doc1 = leerArchivo("AnexoEn.txt")
 doc1N = nlpEn(doc1)
-tokensAnexoA = obtenerTokens(doc1N)
+tokensAnexoB = obtenerTokens(doc1N)
+tokensUnicosB = obtenerTokensUnicos(tokensAnexoB)
+frecuenciaAnexoB = obtenerFrecuenciadeToekens(tokensUnicosB,tokensAnexoB)
+print(tokensUnicosB)
 normalizado = normalizacionEng(doc1N)
+######TOKENS ANTES DE NORMALIZAR
+print(f'El numero total de tokens para el Anexo B es {len(tokensAnexoB)}')
+print(f'El numero total de tokens unicos para el Anexo B es {len(tokensUnicosB)}')
+print("Lista 10 tokens mas comunes antes de normalizar")
+tokensMC,frecMC = obtenerTokensMasComunes(tokensUnicosB,frecuenciaAnexoB)
+print("Lista 10 tokens menos comunes antes de normalizar")
+obtenerTokensMenosComunes(tokensUnicosB,frecuenciaAnexoB,max(frecuenciaAnexoB))
+crearHistograma(tokensUnicosB,frecuenciaAnexoB,'Tokens antes de normalizar')
+crearHistograma(tokensMC,frecMC,'30 tokens mas comunes antes de normalizar')
+
+######TOKENS DESPUES DE NORMALIZAR
+print(f'El numero total de tokens para el Anexo A despues de normalizar es {len(normalizado)}')
+print(normalizado)
+tokensUnicosB = obtenerTokensUnicos(normalizado)
+frecuenciaAnexoB = obtenerFrecuenciadeToekens(tokensUnicosB,normalizado)
+print(f'El numero total de tokens unicos para el Anexo B despues de normalizar es {len(tokensUnicosB)}')
+print(tokensUnicosB)
+print("Lista 10 tokens mas comunes despues de normalizar")
+tokensMC,frecMC = obtenerTokensMasComunes(tokensUnicosB,frecuenciaAnexoB)
+print("Lista 10 tokens menos comunes despues de normalizar")
+obtenerTokensMenosComunes(tokensUnicosB,frecuenciaAnexoB,max(frecuenciaAnexoB))
+crearHistograma(tokensUnicosB,frecuenciaAnexoB,'Tokens despues de normalizar')
+crearHistograma(tokensMC,frecMC,'30 tokens mas comunes despues de normalizar')
