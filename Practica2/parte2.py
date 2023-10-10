@@ -1,7 +1,7 @@
 #CALDERON SABBAGH JUAN ALBERTO
 #5BV1
 #INTELIGENCIA ARTIFICIAL
-#29/09/2023
+#10/10/2023
 #EN ESTE PROGRAMA SE REALIZARAN TAREAS SIMPLES PARA EL ANALISIS DE UN TEXTO, SE OBTENDRAN LOS TOKENS DE CADA TEXTO Y COMPARAREMOS LOS RESULTADOS ANTES Y DESPUES DE NORMALIZAR
 import math
 import pandas as pd
@@ -32,10 +32,11 @@ def pasarAminusculas(lista):
     nuevosTookens = []
     for palabra in lista:
         nuevosTookens.append(palabra.lower())
-    return nuevosTookens
+    nuevoStr = ' '.join(map(str, nuevosTookens))
+    return nuevoStr
 #Esta funcion sirve para quitar los espacios en blanco y signos de puntuacion de la lista de tokens
 #TAMBIEN FORMA PARTE DEL PROCESO DE NORMALIZACION
-def quitarCaracteresEspeciales(lista):
+'''def quitarCaracteresEspeciales(lista):
     #SI ALGUN TOKEN DENTRO DE LA LISTA FORMA PARTE DE LA LISTA DE SIMBOLOS ESPECIALES QUE DEFINIMOS ENTONCES NO SE METEN DENTRO DE LA NUEVA LISTA, DE ESTA MANERA MANTENEMOS SOLO LOS TOKENS IMPORTANTES
     signos = [".","-", ",", "(", ")", " ", "'", ' ', '‘', '’', '…', '\n', '“', '.','”',':','—']
     nuevosTokens = []
@@ -45,16 +46,7 @@ def quitarCaracteresEspeciales(lista):
             nuevosTokens.append(i)
     #AL FINAL JUNTAMOS TODOS LOS TOKENS DE LA LISTA DENTRO DE UN STRING PARA USARLO ESTE EN LOS OTROS PROCESOS DE LA NORMALIZACION
     nuevoStr =' '.join(map(str,nuevosTokens))
-    return nuevoStr
-
-#Funcion para obtener los tokens unicos y meterlos a una lista
-def obtenerTokensUnicos(lista):
-    visto = []
-    for token in lista:
-        if token not in visto:
-            visto.append(token)
-    return visto
-
+    return nuevoStr'''
 #ESTA FUNCION REMUEVE LAS STOPWORDS, COMPRUEBA QUE NO SEA UNA STOPWORD Y SE VAN JUNTANDO EN UN STRING
 def removerStopWords(doc):
     tokensSS = []
@@ -83,22 +75,22 @@ def stemmingIng(doc):
         tokensNuevos.append(stemmer.stem(token))
     nuevoStr = ' '.join(map(str, tokensNuevos))
     return nuevoStr
-#FUNCION PARA HACER POSTAGGING DONDE SE MANTENDRAN LOS TOKENS QUE TENGAN UNA ETIQURTA DE MAYOR RELEVANCIA
+#FUNCION PARA HACER POSTAGGING DONDE SE MANTENDRAN LOS TOKENS QUE TENGAN UNA ETIQUETA DE MAYOR RELEVANCIA
 def posTag(doc):
-    etiquetasAMantener = ['NOUN', 'VERB','ADJ']
+    etiquetasAMantener = ['NOUN', 'VERB','ADJ','ADV','ADP']
     nuevosTokens = []
     for token in doc:
         if token.pos_ in etiquetasAMantener:
             nuevosTokens.append(token)
     return nuevosTokens
 
-#LO MISMO PERO EN INGLES
+#SE JUNTAN TODOS LOS PROCESOS DE LA NORMALIZACION Y RECORRIENDO LA MATRIZ DONDE ESTAN NUESTROS DOCUMENTOS SE VA NORMALIZANDO CADA UNO
 def normalizacion(corpus):
     nuevoCorpus = []
     for doc in corpus:
         normalizado = obtenerTokens(nlpEn(doc))
-        normalizado = pasarAminusculas(normalizado)
-        normalizado = nlpEn(quitarCaracteresEspeciales(normalizado))
+        normalizado = nlpEn(pasarAminusculas(normalizado))
+        #normalizado = nlpEn(quitarCaracteresEspeciales(normalizado))
         normalizado = removerStopWords(normalizado)
         normalizado = nlpEn(stemmingIng(normalizado))
         normalizado = posTag(normalizado)
@@ -107,6 +99,7 @@ def normalizacion(corpus):
     print(nuevoCorpus)
     return nuevoCorpus
 
+#FUNCION PARA CREAR EL DICCIONARIO DE TERMINOS UNICOS DE TODO EL CORPUS
 def generarDiccionario(corpus):
     diccionario = []
     for doc in corpus:
@@ -116,6 +109,7 @@ def generarDiccionario(corpus):
     print(diccionario)
     return diccionario
 
+#FUNCION PARA HACER EL ONE-HOT ENCODING, SE VA RECORRIENDO CADA VECTOR Y LUEGO CADA PALABRA DEL DICCIONARIO, SI LA PALABRA ESTA EN DOCUMENTO ENTONCES SE LE PONE UN 1
 def oneHotEncoding(diccionario, corpus):
     oneHot = []
     for doc in corpus:
@@ -131,6 +125,7 @@ def oneHotEncoding(diccionario, corpus):
     print(df)
     return oneHot
 
+#PARECIDO A ONE-HOT PERO SE CUENTAN CUANTAS VECES APARECE ESE TERMINO EN EL DOCUMENTO
 def termCount(diccionario,corpus):
     termCountArr = []
     for doc in corpus:
@@ -146,6 +141,26 @@ def termCount(diccionario,corpus):
     print(df)
     return termCountArr
 
+#SE SACA LA PROBABILIDAD DE TERMINO PRIMERO VIENDO LA CANTIDAD TOTAL DE TERMINOS EN EL CORPUS Y LUEGO SE RECORRE CADA PALABRA DEL DICCIONARIO Y SE VA CONTANDO LA CANTIDAD DE VECES QUE APARECE EN CADA DOCUMENTO
+def termProb(diccionario,corpus):
+    totalTerms = 0
+    tparr = []
+    vector = []
+    for doc in corpus:
+        totalTerms = totalTerms+len(doc)
+    for palabra in diccionario:
+        count = 0
+        for doc in corpus:
+            if palabra in doc:
+                count = count+doc.count(palabra)
+        vector.append(count/totalTerms)
+    tparr.append(vector)
+    df = pd.DataFrame(tparr, columns=diccionario, index=['Term Prob'])
+    print('\nTerm Probability')
+    print(df)
+    return vector
+
+#EN TERM FREQUENCY SE HACE ALGO PARECIDO A TERMCOUNT PERO ESTA VEZ SE DIVIDE LA CANTIDAD DE VECES QUE APARECE EL TERMINO ENTRE EL TOTAL DE TERMINOS DEL DOCUMENTO
 def termFrequency(diccionario,corpus):
     termFrecArr = []
     for doc in corpus:
@@ -161,6 +176,7 @@ def termFrequency(diccionario,corpus):
     print(df)
     return termFrecArr
 
+#PARA IDF SE VE CUANTAS VECES APARECE CADA TERMINO EN LOS DOCUMENTOS, LUEGO SE APLICA LA FORMULA DEL IDF QUE ES LOG(CANTIDAD DE TERMINOS EN EL CORPUS/CANTIDAD DE VECES QUE SE HAYO CIERTO TERMINO)
 def idf(diccionario,corpus):
     idfArr = []
     vector = []
@@ -169,13 +185,14 @@ def idf(diccionario,corpus):
         for doc in corpus:
             if palabra in doc:
                 count = count+1
-        vector.append(math.log((len(corpus)/count)))
+        vector.append(math.log10(((len(corpus)/count)+1)))
     idfArr.append(vector)
     df = pd.DataFrame(idfArr, columns=diccionario,index=['IDF'])
     print('\nIDF')
     print(df)
     return idfArr
 
+#FINALMENTE PARA TF-IDF SE VA RECORRIENDO LA MATRIZ DE TERM FREQUENCY Y SE MULTIPLICA POR SU RESPECTIVO IDF
 def tfidf(diccionario,tf,idf):
     tfidfArr = []
     for i in range(len(tf)):
@@ -188,16 +205,21 @@ def tfidf(diccionario,tf,idf):
     print(df)
     return tfidfArr
 
+#SE CARGA EL MODULO DE SPACY EN INGLES
 nlpEn = spacy.load('en_core_web_md')
-#SE LEE EL ARCHIVO
-#doc1 = "Pancreatic cancer with metastasis. Jaundice with  transaminitis, evaluate for obstruction process."
+#SE CREA EL CORPUS
 corpus = ["Pancreatic cancer with metastasis. Jaundice with  transaminitis, evaluate for obstruction process.",
           "Pancreatitis. Breast cancer. No output from enteric  tube. Assess tube.",
           'Metastasis pancreatic cancer. Acute renal failure,  evaluate for hydronephrosis or obstructive uropathy.']
+#SE NORMALIZA EL CORPUS
 corpusNorm = normalizacion(corpus)
+#SE CREA EL DICCIONARIO
 diccionario = generarDiccionario(corpusNorm)
+#SE REALIZAN TODAS LAS VECTORIZACIONES DE ACUERDA A LAS DIVERSAS TECNICAS VISTAS EN CLASE
 oneHotEncoding(diccionario,corpusNorm)
 termCount(diccionario,corpusNorm)
+termProb(diccionario,corpusNorm)
 tf = termFrequency(diccionario,corpusNorm)
 iDF = idf(diccionario,corpusNorm)
 tfidf(diccionario,tf,iDF)
+

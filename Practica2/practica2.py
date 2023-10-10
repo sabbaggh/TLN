@@ -1,3 +1,9 @@
+#CALDERON SABBAGH JUAN ALBERTO
+#5BV1
+#INTELIGENCIA ARTIFICIAL
+#10/10/2023
+#EN ESTA PRIMERA PARTE SE VERAN LAS EXPRESIONES REGULARES Y REVISAREMOS SUS RESPECTIVAS OPERACIONES Y TECNICAS QUE SE PUEDEN HACER CON ESTAS
+
 import re
 
 #expresion regular para punto 1
@@ -5,16 +11,15 @@ rg = re.compile('r.*g')
 #expresion regular para punto 2
 costo = re.compile('[1-9]\d\d[.]\d\d')
 #expresion regular para punto 3
-
+abc = re.compile('[aA]([c-zC-Z])*[bB]([aA]|[d-zD-Z])*[cC]')
 #expresion regular para punro 4
 anumero = re.compile('.*:.*:.*:.*[\d]+a|a+[\d]')
 #expresion regular para punto 5
-di = re.compile('d.*i')
+di = re.compile('[dD].*[iI]')
 #espresion regular para punto 6
 anios = re.compile('[(][0-1][0-9][0-9][0-9][)]|[(][2][0][0][0-1][)]')
 #expresion regular para punto 7
 chocho = re.compile('[cC][hH][oO][cC][oO][lL][aA][tT][eE]')
-#\b(?![cC][hH][oO][cC][oO][lL][aA][tT][eE]\b)\w+
 #expresion regular para punto 8
 poblaciones = re.compile('[0-9][0-9][0-9][0-9][0-9][0-9]')
 #expresion regular para punto 9 inciso a
