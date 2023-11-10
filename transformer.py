@@ -6,35 +6,35 @@ from torch import Tensor
 import torch
 import torch.nn as nn
 from torch.nn import Transformer
+from torch.nn.utils.rnn import pad_sequence
 import math
+from torch.utils.data import DataLoader
 
-
+#Se especifican las URLS de donde se van a descargar los datos de entranamiento y validacion
 multi30k.URL["train"] = "https://raw.githubusercontent.com/neychev/small_DL_repo/master/datasets/Multi30k/training.tar.gz"
 multi30k.URL["valid"] = "https://raw.githubusercontent.com/neychev/small_DL_repo/master/datasets/Multi30k/validation.tar.gz"
+#Se definen los lenguajes, el de "entrada" y el "objetivo"
 SRC_LANGUAGE = 'de'
 TGT_LANGUAGE = 'en'
 token_transform = {}
 vocab_transform = {}
-
+#Se crean los tokenizadores para cada lenguaje con los modulos de spacy
 token_transform[SRC_LANGUAGE] = get_tokenizer('spacy', language='de_core_news_sm')
 token_transform[TGT_LANGUAGE] = get_tokenizer('spacy', language='en_core_web_sm')
-# helper function to yield list of tokens
+#Esta funcion sirve para iterar a traves de diferentes secuencias de datos provenientes de multi30k, da una lista de tokens
 def yield_tokens(data_iter: Iterable, language: str) -> List[str]:
     language_index = {SRC_LANGUAGE: 0, TGT_LANGUAGE: 1}
 
     for data_sample in data_iter:
         yield token_transform[language](data_sample[language_index[language]])
 
-# Define special symbols and indices
+#se definen caracteres especiales
 UNK_IDX, PAD_IDX, BOS_IDX, EOS_IDX = 0, 1, 2, 3
-# Make sure the tokens are in order of their indices to properly insert them in vocab
 special_symbols = ['<unk>', '<pad>', '<bos>', '<eos>']
 
-
+#construccion del vocabulario de cada lenguaje
 for ln in [SRC_LANGUAGE, TGT_LANGUAGE]:
-    # Training data Iterator
     train_iter = Multi30k(split='train', language_pair=(SRC_LANGUAGE, TGT_LANGUAGE))
-    # Create torchtext's Vocab object
     vocab_transform[ln] = build_vocab_from_iterator(yield_tokens(train_iter, ln),
                                                     min_freq=1,
                                                     specials=special_symbols,
@@ -45,7 +45,7 @@ for ln in [SRC_LANGUAGE, TGT_LANGUAGE]:
 for ln in [SRC_LANGUAGE, TGT_LANGUAGE]:
   vocab_transform[ln].set_default_index(UNK_IDX)
 
-
+#Definicion del dispostivo a usar
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # helper Module that adds positional encoding to the token embedding to introduce a notion of word order.
@@ -55,9 +55,13 @@ class PositionalEncoding(nn.Module):
                  dropout: float,
                  maxlen: int = 5000):
         super(PositionalEncoding, self).__init__()
+        #calcula los valores para el denominador en la formula del positional encoding
         den = torch.exp(- torch.arange(0, emb_size, 2)* math.log(10000) / emb_size)
+        #se crea un vector columna con los indices de las posiciones
         pos = torch.arange(0, maxlen).reshape(maxlen, 1)
+        #Matriz para almacenar los positional encoding
         pos_embedding = torch.zeros((maxlen, emb_size))
+        #Se calcula su positional encoding de acuerdo a si es par o impar
         pos_embedding[:, 0::2] = torch.sin(pos * den)
         pos_embedding[:, 1::2] = torch.cos(pos * den)
         pos_embedding = pos_embedding.unsqueeze(-2)
@@ -70,12 +74,15 @@ class PositionalEncoding(nn.Module):
 
 # helper Module to convert tensor of input indices into corresponding tensor of token embeddings
 class TokenEmbedding(nn.Module):
+    #Simplemente se define un embedding del pytorch y recibe como parametros el tam del vocabulario y el tamdel embedding
     def __init__(self, vocab_size: int, emb_size):
         super(TokenEmbedding, self).__init__()
         self.embedding = nn.Embedding(vocab_size, emb_size)
         self.emb_size = emb_size
-
+    #Metodo para definir como se procesan los datos de input
     def forward(self, tokens: Tensor):
+        #Recibe los tokens, saca el embedding de cada uno y lo multiplica por la raiz cuadrada del tam del embedding
+        #esto para escalar los valores y no se vayan a un valor muy extremo
         return self.embedding(tokens.long()) * math.sqrt(self.emb_size)
 
 # Seq2Seq Network
@@ -125,6 +132,8 @@ class Seq2SeqTransformer(nn.Module):
                           self.tgt_tok_emb(tgt)), memory,
                           tgt_mask)
 
+#funciones para enmascaramiento, estos es para que el modelo solo se concentre en tokens posteriores o tokens que porporcionen informeacion
+#Igual esto sirve para que durante el proceso de decodificacion el modelo solo pueda atendar a tokens posteriores
 def generate_square_subsequent_mask(sz):
     mask = (torch.triu(torch.ones((sz, sz), device=DEVICE)) == 1).transpose(0, 1)
     mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
@@ -144,6 +153,7 @@ def create_mask(src, tgt):
 
 torch.manual_seed(0)
 
+#Definicion de los parametros para nuestro modelo
 SRC_VOCAB_SIZE = len(vocab_transform[SRC_LANGUAGE])
 TGT_VOCAB_SIZE = len(vocab_transform[TGT_LANGUAGE])
 EMB_SIZE = 512
@@ -152,7 +162,7 @@ FFN_HID_DIM = 512
 BATCH_SIZE = 128
 NUM_ENCODER_LAYERS = 3
 NUM_DECODER_LAYERS = 3
-
+#creacion del modelo
 transformer = Seq2SeqTransformer(NUM_ENCODER_LAYERS, NUM_DECODER_LAYERS, EMB_SIZE,
                                  NHEAD, SRC_VOCAB_SIZE, TGT_VOCAB_SIZE, FFN_HID_DIM)
 
@@ -165,8 +175,6 @@ transformer = transformer.to(DEVICE)
 loss_fn = torch.nn.CrossEntropyLoss(ignore_index=PAD_IDX)
 
 optimizer = torch.optim.Adam(transformer.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
-
-from torch.nn.utils.rnn import pad_sequence
 
 # helper function to club together sequential operations
 def sequential_transforms(*transforms):
@@ -201,7 +209,6 @@ def collate_fn(batch):
     tgt_batch = pad_sequence(tgt_batch, padding_value=PAD_IDX)
     return src_batch, tgt_batch
 
-from torch.utils.data import DataLoader
 
 def train_epoch(model, optimizer):
     model.train()
@@ -274,6 +281,7 @@ def translate(model: torch.nn.Module, src_sentence: str):
     src_mask = (torch.zeros(num_tokens, num_tokens)).type(torch.bool)
     tgt_tokens = greedy_decode(
         model,  src, src_mask, max_len=num_tokens + 5, start_symbol=BOS_IDX).flatten()
-    return " ".join(vocab_transform[TGT_LANGUAGE].lookup_tokens(list(tgt_tokens.cpu().numpy()))).replace("<bos>", "").replace("<eos>", "")
+    return (" ".join(vocab_transform[TGT_LANGUAGE].lookup_tokens(list(tgt_tokens.cpu().numpy())))
+            .replace("<bos>", "").replace("<eos>", ""))
 
-print(translate(transformer, "Eine Gruppe von Menschen steht vor einem Iglu ."))
+print(translate(transformer, "Eine Person die in der Schlange wartet ."))
